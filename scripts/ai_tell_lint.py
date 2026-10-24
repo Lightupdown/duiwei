@@ -513,7 +513,9 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
             metrics["扣分"][spec["name"]] = round(penalty, 1)
 
     # 公文 / 官方格式要素：识别出来只提示，不进扣分
-    official_hits = [name for name, pat in OFFICIAL_FORMAT_PATTERNS.items() if pat.search(text)]
+    official_hits = []
+    if requested_genre in {"notice", "gov"}:
+        official_hits = [name for name, pat in OFFICIAL_FORMAT_PATTERNS.items() if pat.search(text)]
     if official_hits:
         metrics["公文格式要素"] = official_hits
     if official_manual:
@@ -556,16 +558,17 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
     # 口号式收尾（演讲稿 / 口播）：结尾附近连续三个 ≤8 字短句
     if requested_genre in {"speech", "spoken"} and paragraphs:
         tail_paras = paragraphs[-2:] if len(paragraphs) >= 2 else paragraphs
-        clauses = []
         for para in tail_paras:
-            clauses.extend(c.strip() for c in re.split(r"[，,。！？；;、]", para) if c.strip())
-        for i in range(len(clauses) - 2):
-            window = clauses[i:i+3]
-            if all(cjk_count(c) <= 8 for c in window):
-                metrics["人工复核项"]["结尾疑似口号"] = (
-                    "结尾附近出现「" + "、".join(window) +
-                    "」这样的三连短句，像横幅；改成具体动作/画面，或删掉一句。"
-                )
+            clauses = [c.strip() for c in re.split(r"[，,。！？；;、]", para) if c.strip()]
+            for i in range(len(clauses) - 2):
+                window = clauses[i:i+3]
+                if all(cjk_count(c) <= 8 for c in window):
+                    metrics["人工复核项"]["结尾疑似口号"] = (
+                        "结尾附近出现「" + "、".join(window) +
+                        "」这样的三连短句，像横幅；改成具体动作/画面，或删掉一句。"
+                    )
+                    break
+            if "结尾疑似口号" in metrics["人工复核项"]:
                 break
 
     # 第二层人工提示（只提示，不扣分；见 references/review-layers.md）

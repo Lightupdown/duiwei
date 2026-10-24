@@ -299,6 +299,12 @@ def main() -> int:
     if not ok_gov_hint:
         failures.append("gov 模式人工复核提示缺失")
 
+    speech_format = collect_metrics(clean_text("老师们、同学们：\n早上好。"), genre="speech")
+    ok_speech_format = "公文格式要素" not in speech_format
+    print(f"  {'✓' if ok_speech_format else '✗'} speech 模式不把称呼误判为公文格式")
+    if not ok_speech_format:
+        failures.append("speech 模式把称呼误判为公文格式")
+
     slogan_m = collect_metrics(clean_text("停三秒，看一眼，再扔。\n\n我的演讲完了，谢谢大家。"), genre="speech")
     slogan_hint = slogan_m.get("人工复核项", {}).get("结尾疑似口号")
     slogan_tips = suggestions(slogan_m)
