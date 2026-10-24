@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.11，零依赖）
+"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.12，零依赖）
 
 只查表面特征：词表命中、防御性句式、句长/段长分布、口语标记密度、标点规整度。
 第二层提示（作文腔意象 / 人物格言句 / 无阻力 / 过度洁净）只进人工复核、不扣分；完整审稿见 references/review-layers.md。
@@ -284,15 +284,12 @@ GENRE_LABELS = {
 # 文体豁免：这些词在该文体里是正常用法，不按 AI 腔扣分
 GENRE_EXEMPTIONS = {
     "essay": {"拟人喻体/意义拔高": {"仿佛", "宛如"},
-              "通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"},
-              "营销/时代套话": {"尤为重要", "至关重要"}},
+              "通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "chat": {"收条式应答": {"收到", "懂了", "我明白了"}},
     "written": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "article": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "notice": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
-    "report": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"},
-               "营销/时代套话": {"好评"},
-               "职场黑话/万能升华": {"赋能"}},
+    "report": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "gov": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
 }
 
@@ -452,6 +449,10 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
             total = sum(c["次数"] for c in counted)
             density = total / kchars
             penalty = min(spec["cap"], density * spec["weight"])
+            if requested_genre == "report":
+                penalty *= {"营销/时代套话": 0.5, "职场黑话/万能升华": 0.5}.get(category, 1.0)
+            if requested_genre == "essay":
+                penalty *= {"营销/时代套话": 0.5}.get(category, 1.0)
             if category == "报告/总结套话" and requested_genre != "report":
                 # 这组词在政务文本里可能是规范表述；只在 report 模式计分，其他模式交人工四测试
                 penalty = 0.0
@@ -473,6 +474,7 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
     # 正则句式
     pattern_hits: list[dict] = []
     official_manual: list[str] = []
+    manual_reasons: set[str] = set()
     manual_rules = OFFICIAL_MANUAL_RULES.get(requested_genre, ())
     for spec in REGEX_PATTERNS:
         matches = [m.group(0) for m in spec["pattern"].finditer(text)]
@@ -483,11 +485,13 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
         if any(rule in spec["name"] for rule in manual_rules):
             # 官方文体：合法对举 / 格式性序数等不自动扣分，转人工复核
             official_manual.append(spec["name"])
+            manual_reasons.add("official")
             penalty = 0.0
-        elif (requested_genre == "essay" and spec["name"].startswith("防御性句式")
+        elif (spec["name"].startswith("防御性句式")
               and matches and all(("并非" in m or "而非" in m) for m in matches)):
-            # 作文里「并非……而是……」是正常对举；「不是……而是……」仍按 AI 防御句式扣分
+            # 「并非……而是……」在作文、评论、公文里都是正常对举；「不是……而是……」仍按 AI 防御句式扣分
             official_manual.append(spec["name"])
+            manual_reasons.add("formal")
             penalty = 0.0
         pattern_hits.append({
             "类别": spec["name"],
@@ -505,6 +509,7 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
         metrics["公文格式要素"] = official_hits
     if official_manual:
         metrics["人工复核（文体）"] = sorted(set(official_manual))
+        metrics["人工复核（文体）来源"] = sorted(manual_reasons)
     metrics["官方文体模式"] = requested_genre if protected_mode else None
 
     # 金句近似
@@ -687,7 +692,8 @@ def suggestions(m: dict) -> list[str]:
     tips = []
     checks = m.get("人工复核项", {})
     extra_checks = [k for k in checks if k != "段首疑似零回指"]
-    if m.get("AI味风险分", 100) <= 10 and not extra_checks:
+    if (m.get("AI味风险分", 100) <= 10 and not extra_checks
+            and not m.get("人工复核（文体）")):
         return ["风险分很低，没有明显 AI 腔。不要为改而改；重点检查事实、具体细节和场景是否够。"]
     cats = m.get("扣分", {})
     if any("防御性" in k for k in cats):
@@ -737,12 +743,21 @@ def suggestions(m: dict) -> list[str]:
             "识别为公文格式：格式要素与文种结语不计入 AI 味。请人工核对文种—结语对应、"
             "发文字号/成文日期/层次序数（见 research/deep/official-docs.md）。"
         )
-    if m.get("人工复核（官方文体）"):
-        tips.append(
-            "文体人工复核："
-            + "、".join(m["人工复核（官方文体）"])
-            + " 不自动扣分，按 research/deep/gov-tone.md 的四测试判断是否保留。"
-        )
+    if m.get("人工复核（文体）"):
+        names = "、".join(m["人工复核（文体）"])
+        sources = set(m.get("人工复核（文体）来源", []))
+        if "formal" in sources or ("essay" in sources and "official" not in sources):
+            tips.append(
+                "文体人工复核：" + names +
+                " 属正常对举（并非……而是……），不自动扣分；结合上下文判断是否保留，不要当 AI 防御句式删。"
+            )
+        elif "official" in sources:
+            tips.append(
+                "文体人工复核：" + names +
+                " 不自动扣分，按 references/official-style.md 的四测试判断是否保留。"
+            )
+        else:
+            tips.append("文体人工复核：" + names + " 不自动扣分，请人工判断。")
     if any("书面腔" in k for k in cats):
         tips.append("有书面腔：进行+动词 / 随着…发展 / 被…所，改成动词直接说（做、改、看）。")
     if checks.get("段首疑似零回指"):
@@ -811,9 +826,13 @@ def print_report(path: str, m: dict) -> None:
     if m.get("公文格式要素"):
         print(f"识别为公文格式：{'、'.join(m['公文格式要素'])}（格式要素与文种结语不计入 AI 味）")
         print("  请人工核对：文种—结语对应、发文字号/成文日期/层次序数；惯例见 research/deep/official-docs.md")
-    if m.get("人工复核（官方文体）"):
+    if m.get("人工复核（文体）"):
         print(f"文体人工复核：{'、'.join(m['人工复核（文体）'])}（不自动扣分）")
-        print("  按 research/deep/gov-tone.md 第三节「四测试」判断：能对账、挪不动、在结构位、删了会疼才保留")
+        sources = set(m.get("人工复核（文体）来源", []))
+        if "formal" in sources or ("essay" in sources and "official" not in sources):
+            print("  「并非……而是……」属正常对举，结合上下文判断是否保留，不要当 AI 防御句式删")
+        else:
+            print("  按 references/official-style.md 的四测试判断：能对账、挪不动、在结构位、删了会疼才保留")
     if m["字数"] < 150:
         print("  注：字数不足 150，风险分容易被低估，请以命中项为主。")
     hits = fmt_hits(m)

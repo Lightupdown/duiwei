@@ -29,7 +29,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 
-from ai_tell_lint import clean_text, collect_metrics  # noqa: E402
+from ai_tell_lint import clean_text, collect_metrics, suggestions  # noqa: E402
 
 SAMPLES = ROOT / "samples"
 EXAMPLES = ROOT / "references" / "human-voice" / "rewrite-examples.md"
@@ -270,6 +270,21 @@ def main() -> int:
         if hit:
             failures.append(f"文体豁免失效：{genre} 仍把「{category}」计入扣分")
 
+    essay_manual = collect_metrics(clean_text("这并非失败，而是另一种开始。"), genre="essay")
+    essay_tips = suggestions(essay_manual)
+    ok_essay_hint = bool(essay_manual.get("人工复核（文体）")) and any("正常对举" in tip for tip in essay_tips)
+    print(f"  {'✓' if ok_essay_hint else '✗'} essay 模式「并非……而是」转人工且有提示")
+    if not ok_essay_hint:
+        failures.append("essay 模式人工复核提示缺失（人工复核键或 suggestions 输出）")
+
+    gov_manual = collect_metrics(clean_text("这不是技术问题，而是管理问题。"), genre="gov")
+    gov_tips = suggestions(gov_manual)
+    ok_gov_hint = bool(gov_manual.get("人工复核（文体）")) and any(
+        "四测试" in tip or "official-style" in tip for tip in gov_tips)
+    print(f"  {'✓' if ok_gov_hint else '✗'} gov 模式官方对举转人工且有提示")
+    if not ok_gov_hint:
+        failures.append("gov 模式人工复核提示缺失")
+
     gov_m = collect_metrics(clean_text("在公司的正确领导下，我们围绕年度工作目标努力。"), genre="gov")
     ok_gov = "报告/总结套话" not in gov_m.get("扣分", {})
     print(f"  {'✓' if ok_gov else '✗'} gov 模式不因「报告/总结套话」扣分（交四测试）")
@@ -304,8 +319,12 @@ def main() -> int:
     ext_files = [p for p in ext_files if p.name != "README.md"]
     if not ext_files:
         failures.append("缺少外部样本 samples/external/*.md")
+    tuning_external = {"gaokao-beijing-2020-shuo-weiji.md", "report-vocational-school-2024.md", "article-shmeea-essay-review.md"}
+    tuning_files = [p for p in ext_files if p.name in tuning_external]
+    holdout_files = [p for p in ext_files if p.name not in tuning_external]
+    print(f"  调参集：{len(tuning_files)} 篇（不报误报率，避免自我证明）；留出集：{len(holdout_files)} 篇")
     false_positives = 0
-    for path in ext_files:
+    for path in holdout_files:
         genre = external_genre(path.name)
         s = score_genre(path.read_text(encoding="utf-8"), genre)
         ok = s <= 15
@@ -315,7 +334,7 @@ def main() -> int:
         if not ok:
             failures.append(f"外部真实文本误伤：{path.name} {s} > 15")
     if ext_files:
-        print(f"  外部样本误报率：{false_positives}/{len(ext_files)}")
+        print(f"  留出集误报率：{false_positives}/{len(holdout_files)}")
 
     print("\n== 8. 公文 / 官方文体模式 ==")
     notice_text = (SAMPLES / "08-official-notice.md").read_text(encoding="utf-8")
