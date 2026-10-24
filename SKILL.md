@@ -1,10 +1,12 @@
 ---
 name: de-ai-flavor
-description: |
-  中文写作与改写的「去 AI 味」规范：先判文体再改，覆盖作文/文学、公众号/文章、通知/公告、视频口播、朋友圈/聊天、产品/课程文案、报告/总结、演讲稿；只说了「润色一下」时按润色流程处理。
-  当用户说「AI 味太重」「别像 AI 写的」「自然一点」「口语化」「这段读起来假」「改得像人话」「降 AI 率」，或要求自查文本时使用。
-  核心：恢复该文体里人类语言的自然痕迹，不是堆口语词；不代写、不帮规避 AI 检测。
-  纯学术论文不在覆盖范围内。
+version: "0.14.0"
+display_name: 去AI味
+display_name_en: De-AI-Flavor
+description_zh: |
+  中文写作与改写的「去 AI 味」规范：先判文体再改，覆盖八类文体（作文/文学、公众号/文章、通知/公告、视频口播、朋友圈/聊天、产品/课程文案、报告/总结、演讲稿）；只说了「润色一下」时按润色流程处理。内置分层审稿、体检脚本与正负样本库；不代写、不帮规避 AI 检测。
+description_en: |
+  A Chinese writing and rewriting skill for removing AI flavor: genre-aware standards for eight text types (essays, articles, notices, video scripts, social chat, product copy, reports, speeches), layered review, a surface-level linter, and positive/negative samples. It is not a ghostwriting tool and does not help evade AI detection.
 ---
 
 # 去 AI 味写作规范（de-ai-flavor v0.14）

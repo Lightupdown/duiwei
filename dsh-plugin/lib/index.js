@@ -13,14 +13,14 @@ const FALLBACK_DESCRIPTION =
   '中文写作与改写的「去 AI 味」规范：先判文体再改，覆盖作文/文学、公众号/文章、通知/公告、视频口播、朋友圈/聊天、产品/课程文案、报告/总结；' +
   '或让 AI 自查文本有没有 AI 腔时使用。不代写、不帮规避 AI 检测。'
 
-// 从 SKILL.md frontmatter 读 description，避免插件里再维护一份会过期的简介。
+// 从 SKILL.md frontmatter 读 description_zh，避免插件里再维护一份会过期的简介。
 function readFrontmatterDescription(body) {
   const m = body.match(/^---\r?\n([\s\S]*?)\r?\n---/)
   if (!m) return ''
   const lines = m[1].split(/\r?\n/)
-  const i = lines.findIndex((line) => /^description:/.test(line))
+  const i = lines.findIndex((line) => /^description_zh:/.test(line) || /^description:/.test(line))
   if (i < 0) return ''
-  const first = lines[i].replace(/^description:\s*/, '').trim()
+  const first = lines[i].replace(/^description_zh:\s*/, '').replace(/^description:\s*/, '').trim()
   if (first && first !== '|' && first !== '>') return first.replace(/^["']|["']$/g, '')
   const buf = []
   for (let j = i + 1; j < lines.length; j++) {
