@@ -58,6 +58,7 @@ const required = [
   'references/genres/06-产品与课程文案.md',
   'references/genres/07-润色与改稿.md',
   'references/genres/08-报告与总结.md',
+  'references/genres/09-演讲稿.md',
   'references/review-layers.md',
   'references/official-style.md',
   'samples/hard-cases/01-ai-but-clean.md',

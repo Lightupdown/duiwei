@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.13，零依赖）
+"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.14，零依赖）
 
 只查表面特征：词表命中、防御性句式、句长/段长分布、口语标记密度、标点规整度。
-第二层提示（作文腔意象 / 人物格言句 / 无阻力 / 过度洁净）只进人工复核、不扣分；完整审稿见 references/review-layers.md。
+第二层提示（作文腔意象 / 人物格言句 / 无阻力 / 过度洁净 / 结尾疑似口号）只进人工复核、不扣分；完整审稿见 references/review-layers.md。
 分数仅供参考；脚本 0 分不代表过关。
 
 用法：
@@ -13,8 +13,8 @@
     python3 ai_tell_lint.py --genre spoken 口播稿.md
     python3 ai_tell_lint.py --fail-over 60 文本.md     # 分数 >= 60 时返回退出码 1
 
-文体：auto / spoken / written / chat / essay / article / notice / report / copy / gov
-    其中 essay=作文、article=文章、notice=通知公告、report=报告总结、copy=产品文案、gov=政务官方。
+文体：auto / spoken / written / chat / essay / article / notice / report / copy / gov / speech
+    其中 essay=作文、article=文章、notice=通知公告、report=报告总结、copy=产品文案、gov=政务官方、speech=演讲稿。
 词表来源：references/ai-tells-cn.md，改词表请同步改那边。
 """
 
@@ -275,10 +275,10 @@ RESISTANCE_WORDS = [
 ]
 
 # 文体别名：作文 / 通知 / 文章 / 文案都按「书面」计分，只是标签不同
-GENRE_ALIASES = {"essay": "written", "notice": "written", "article": "written", "copy": "written", "gov": "written", "report": "written"}
+GENRE_ALIASES = {"essay": "written", "notice": "written", "article": "written", "copy": "written", "gov": "written", "report": "written", "speech": "written"}
 GENRE_LABELS = {
     "auto": "自动", "spoken": "口播", "written": "书面", "chat": "聊天",
-    "essay": "作文", "notice": "通知", "article": "文章", "copy": "文案", "gov": "政务/官方", "report": "报告",
+    "essay": "作文", "notice": "通知", "article": "文章", "copy": "文案", "gov": "政务/官方", "report": "报告", "speech": "演讲稿",
 }
 
 # 文体豁免：这些词在该文体里是正常用法，不按 AI 腔扣分
@@ -553,6 +553,21 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
                 zero_anaphora.append(first)
     metrics["人工复核项"] = {"段首疑似零回指": zero_anaphora[:5]}
 
+    # 口号式收尾（演讲稿 / 口播）：结尾附近连续三个 ≤8 字短句
+    if requested_genre in {"speech", "spoken"} and paragraphs:
+        tail_paras = paragraphs[-2:] if len(paragraphs) >= 2 else paragraphs
+        clauses = []
+        for para in tail_paras:
+            clauses.extend(c.strip() for c in re.split(r"[，,。！？；;、]", para) if c.strip())
+        for i in range(len(clauses) - 2):
+            window = clauses[i:i+3]
+            if all(cjk_count(c) <= 8 for c in window):
+                metrics["人工复核项"]["结尾疑似口号"] = (
+                    "结尾附近出现「" + "、".join(window) +
+                    "」这样的三连短句，像横幅；改成具体动作/画面，或删掉一句。"
+                )
+                break
+
     # 第二层人工提示（只提示，不扣分；见 references/review-layers.md）
 
     # 1) 作文腔意象（作文 / 自动模式，出现 2 个以上才提示）
@@ -787,6 +802,8 @@ def suggestions(m: dict) -> list[str]:
         tips.append("全篇无阻力：加一次失败、还价、怀疑或返工，事件才像真发生过。")
     if checks.get("过度洁净"):
         tips.append("过度洁净：标点过于规整，可能显得均匀；允许一处破折号、省略号或感叹。")
+    if checks.get("结尾疑似口号"):
+        tips.append("结尾疑似口号：" + checks["结尾疑似口号"])
     if extra_checks:
         tips.append(
             "第二层审稿（脚本查不到）：按 references/review-layers.md 过逻辑 / 工序 / 人物台词 / "
@@ -884,8 +901,8 @@ def main() -> int:
     parser.add_argument("files", nargs="*", help="待检查文件；留空则读 stdin")
     parser.add_argument("--json", action="store_true", help="输出 JSON")
     parser.add_argument("--genre", default="auto",
-                        choices=["auto", "spoken", "written", "chat", "essay", "notice", "article", "copy", "gov", "report"],
-                        help="文体：auto / spoken / written / chat / essay（作文）/ article（文章）/ notice（通知公告）/ report（报告总结）/ copy（产品文案）/ gov（政务官方）。按对应文体给权重与豁免；gov 下对举与版式均匀只提示不扣分。")
+                        choices=["auto", "spoken", "written", "chat", "essay", "notice", "article", "copy", "gov", "report", "speech"],
+                        help="文体：auto / spoken / written / chat / essay（作文）/ article（文章）/ notice（通知公告）/ report（报告总结）/ copy（产品文案）/ gov（政务官方）/ speech（演讲稿）。按对应文体给权重与豁免；gov 下对举与版式均匀只提示不扣分。")
     parser.add_argument("--fail-over", type=float, default=None, help="风险分 >= 该值时返回退出码 1")
     args = parser.parse_args()
 

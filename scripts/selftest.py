@@ -45,6 +45,7 @@ GENRE_FILES = [
     "06-产品与课程文案.md",
     "07-润色与改稿.md",
     "08-报告与总结.md",
+    "09-演讲稿.md",
 ]
 
 
@@ -298,6 +299,14 @@ def main() -> int:
     if not ok_gov_hint:
         failures.append("gov 模式人工复核提示缺失")
 
+    slogan_m = collect_metrics(clean_text("停三秒，看一眼，再扔。\n\n我的演讲完了，谢谢大家。"), genre="speech")
+    slogan_hint = slogan_m.get("人工复核项", {}).get("结尾疑似口号")
+    slogan_tips = suggestions(slogan_m)
+    ok_slogan = bool(slogan_hint) and any("结尾疑似口号" in tip for tip in slogan_tips)
+    print(f"  {'✓' if ok_slogan else '✗'} speech 模式三连短句收尾被提示（不扣分）")
+    if not ok_slogan:
+        failures.append("speech 模式口号式收尾提示缺失")
+
     gov_m = collect_metrics(clean_text("在公司的正确领导下，我们围绕年度工作目标努力。"), genre="gov")
     ok_gov = "报告/总结套话" not in gov_m.get("扣分", {})
     print(f"  {'✓' if ok_gov else '✗'} gov 模式不因「报告/总结套话」扣分（交四测试）")
@@ -447,6 +456,13 @@ def main() -> int:
             failures.append("坏样本未触发第二层提示，或 lint 仍在用大额加分掩盖风险")
     else:
         failures.append("缺少坏样本原文 01-ai-but-clean.raw.md")
+
+    skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    ok_skill = ("上限不是任务" in skill_text and "09-演讲稿" in skill_text
+                and "金句" in skill_text)
+    print(f"  {'✓' if ok_skill else '✗'} SKILL 明确「金句上限不是任务」并接入演讲稿档案")
+    if not ok_skill:
+        failures.append("SKILL 金句配额语义或演讲稿路由缺失")
 
     review_extract = ROOT / "scripts" / "review_extract.py"
     okx = review_extract.exists() and "第二层审稿的素材提取器" in review_extract.read_text(encoding="utf-8")

@@ -1,6 +1,6 @@
 # 去 AI 味 · de-ai-flavor
 
-> 中文写作与改写的「去 AI 味」规范：七类文体、分层审稿、体检脚本、正负样本库。
+> 中文写作与改写的「去 AI 味」规范：八类文体、分层审稿、体检脚本、正负样本库。
 >
 > A Chinese writing/rewriting skill for removing "AI flavor" — genre-aware rules, layered human review, a surface-level linter, and annotated positive/negative samples. It is **not** an AI detector and does **not** help evade detection.
 
@@ -10,7 +10,7 @@
 
 一套让中文写得更像「具体的人在这个场合说话」的写作规范，也是一个可直接装进 AI Agent 的技能：
 
-- **七类文体分开处理**：作文 / 公众号文章 / 通知公告 / 视频口播 / 朋友圈聊天 / 产品课程文案 / 报告总结；另加「只说了润色一下」的改稿流程。
+- **八类文体分开处理**：作文 / 公众号文章 / 通知公告 / 视频口播 / 朋友圈聊天 / 产品课程文案 / 报告总结 / 演讲稿；另加「只说了润色一下」的改稿流程。
 - **三档审稿**：叙事类查逻辑 / 工序 / 人物台词 / 细节负载 / 结构闭环；议论类查扣题与论证；功能类（通知 / 报告 / 聊天 / 文案）只走保真门禁 + 文体自检。脚本查词、句式、节奏等表面特征，0 分不代表过关。
 - **两张评分卡**：A 真实感（防 AI 腔与设计感）、B 文笔（防越改越干瘪）。两张都过才交付。
 - **可验证**：体检脚本、13 组改写案例回归、坏样本 / 正样本对照、自动自检脚本。
@@ -51,6 +51,7 @@ python3 scripts/ai_tell_lint.py --genre essay 作文.md          # 作文
 python3 scripts/ai_tell_lint.py --genre notice 通知.md         # 通知 / 公告
 python3 scripts/ai_tell_lint.py --genre gov 评论.md            # 官方评论 / 政务
 python3 scripts/ai_tell_lint.py --genre report 总结.md        # 报告 / 总结
+python3 scripts/ai_tell_lint.py --genre speech 演讲稿.md      # 演讲稿
 ```
 
 - 审稿素材（剧本式提取段落骨架、台词、数字、意象、结尾）：
@@ -78,7 +79,7 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 │   ├── review-layers.md          # 叙事类四层审稿 + A/B 卡 + 议论类卡 C + 停止规则
 │   ├── official-style.md         # 官方文体一页判定表（四测试、公文惯例 A/B/C）
 │   ├── human-voice/              # 人话特征库 + AI→人 改写案例
-│   └── genres/                   # 文体矩阵 + 8 个文体档案
+│   └── genres/                   # 文体矩阵 + 9 个档案（8 类文体 + 润色）
 ├── research/
 │   ├── github-survey.md          # 17 个同类项目调研
 │   ├── genre-notes.md            # 分文体外部资料
@@ -97,7 +98,7 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 └── .github/workflows/ci.yml      # GitHub Actions：跑自检
 ```
 
-## 七类文体，各用各的标准
+## 八类文体，各用各的标准
 
 | 文体 | 口语容忍 | 一句话标准 |
 | --- | --- | --- |
@@ -108,6 +109,7 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 | 朋友圈 / 聊天 | 最高 | 短、随意、像本人；不演、不客服 |
 | 产品 / 课程文案 | 低 | 具体、可验证、承认局限；不吹、不假 |
 | 报告 / 总结 | 0 | 可信优先：数据有口径、问题不虚化、下一步能执行 |
+| 演讲稿 | 中（每千字 1–3 个口头衔接） | 念出来像现场的人；结尾不喊口号、不排三连祈使；金句 0–1，上限不是任务 |
 
 详细规则见 [`references/genres/00-文体矩阵.md`](references/genres/00-文体矩阵.md) 和它索引的档案。
 
@@ -167,6 +169,7 @@ DSH 的技能通过一个桥接插件注册，桥接插件在 [`dsh-plugin/`](ds
 - 高考 / 中考评分细则各省不完全公开，深研里的分项数据部分是教研整理（B 级），引用时注意。
 - 政策与官方文风会更新，建议每学期复核 `research/deep/`。
 - 报告 / 总结目前只有一组正负样本，阈值与套话词表还需要真实工作总结、述职、情况报告来校准。
+- 演讲稿专档刚建，口号测试与三连短句检测还需要真实演讲稿校准；当前只有一个小例子。
 
 ## 贡献
 
