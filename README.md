@@ -154,7 +154,7 @@ DSH 的技能通过一个桥接插件注册，桥接插件在 [`dsh-plugin/`](ds
 3. 在同目录 `cordis.patch.yml` 的 `insert` 列表里加：
    `- id: de-ai-flavor-dsh` / `name: 'de-ai-flavor-dsh'`
 4. 在 profile 目录跑 `pnpm install`（或用等价的符号链接把包放进 `node_modules`）。
-5. 重启 DSH，技能列表里会出现 `de-ai-flavor`。
+5. 重启 DSH，技能列表里会出现 `duiwei`。
 
 > 不同版本的 DSH / 其他 Agent 框架的加载方式可能不同；不装 DSH 也能把 `SKILL.md` 直接当提示词使用。
 

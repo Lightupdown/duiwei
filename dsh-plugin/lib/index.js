@@ -37,7 +37,7 @@ function readFrontmatterDescription(body) {
 
 function loadContent() {
   if (!existsSync(SKILL_MD)) {
-    return `# de-ai-flavor（未找到本地文件）\n\n${SKILL_MD} 不存在，请向用户确认技能目录位置。`
+    return `# 对味（duiwei）（未找到本地文件）\n\n${SKILL_MD} 不存在，请向用户确认技能目录位置。`
   }
   const body = readFileSync(SKILL_MD, 'utf-8')
   return (
@@ -53,12 +53,12 @@ export function apply(ctx) {
     const content = loadContent()
     const parsed = readFrontmatterDescription(content)
     ctx.skills.register({
-      name: 'de-ai-flavor',
+      name: 'duiwei',
       source: 'runtime',
       description: parsed || FALLBACK_DESCRIPTION,
       content,
     })
   } catch (e) {
-    console.error('[de-ai-flavor-dsh] skill 注册失败：' + String((e && e.message) || e))
+    console.error('[duiwei-dsh] skill 注册失败：' + String((e && e.message) || e))
   }
 }

@@ -36,10 +36,10 @@ apply({
 
 console.log('== DSH 桥接插件自检 ==')
 check(registered !== null, 'apply() 调用了 ctx.skills.register')
-check(registered?.name === 'de-ai-flavor', `注册名是 de-ai-flavor（实际：${registered?.name}）`)
+check(registered?.name === 'duiwei', `注册名是 duiwei（实际：${registered?.name}）`)
 check(typeof registered?.description === 'string' && registered.description.length > 50,
   'description 已提供且长度足够')
-check(typeof registered?.content === 'string' && registered.content.includes('# 去 AI 味写作规范'),
+check(typeof registered?.content === 'string' && registered.content.includes('# 对味写作规范'),
   'SKILL.md 正文已读入')
 check(registered?.content.includes('**技能目录**'), '正文末尾注入了技能目录绝对路径')
 check(registered?.content.includes(SKILL_DIR), '注入的目录路径与本项目一致')
