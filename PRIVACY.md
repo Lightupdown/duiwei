@@ -9,7 +9,7 @@
 1. **临时降低暴露面**：在清除完成前，可把仓库设为 private（Settings → General → Danger Zone → Change visibility）。
 2. **联系 GitHub Support**：打开 https://support.github.com/contact ，选择 *Repository* → *Removing sensitive data*（或直接说明 "request removal of cached views and unreachable commits"）。
 3. **工单里提供**：
-   - 仓库：`https://github.com/Lightupdown/de-ai-flavor`
+   - 仓库：`https://github.com/Lightupdown/duiwei`
    - 旧提交哈希（向维护者索取；不要写进公开文件）
    - 涉及文件：`samples/external/*.md`
    - 说明：包含学生实名，其中一名为未成年人；已从当前版本删除并重写分支；请求清除缓存视图和无引用提交（unreachable commits）。

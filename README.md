@@ -1,10 +1,10 @@
-# 去 AI 味 · de-ai-flavor
+# 对味 · duiwei
 
 > 中文写作与改写的「去 AI 味」规范：八类文体、分层审稿、体检脚本、正负样本库。
 >
 > A Chinese writing/rewriting skill for removing "AI flavor" — genre-aware rules, layered human review, a surface-level linter, and annotated positive/negative samples. It is **not** an AI detector and does **not** help evade detection.
 
-[![selftest](https://github.com/Lightupdown/de-ai-flavor/actions/workflows/ci.yml/badge.svg)](https://github.com/Lightupdown/de-ai-flavor/actions/workflows/ci.yml)
+[![selftest](https://github.com/Lightupdown/duiwei/actions/workflows/ci.yml/badge.svg)](https://github.com/Lightupdown/duiwei/actions/workflows/ci.yml)
 
 ## 这是什么
 
@@ -148,9 +148,9 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 
 DSH 的技能通过一个桥接插件注册，桥接插件在 [`dsh-plugin/`](dsh-plugin/)。
 
-1. 把仓库克隆到固定位置，例如 `~/skills/de-ai-flavor`。
+1. 把仓库克隆到固定位置，例如 `~/skills/duiwei`。
 2. 在 DSH desktop profile 的 `package.json` `dependencies` 里加一条 link 依赖：
-   `"de-ai-flavor-dsh": "link:<你的路径>/de-ai-flavor/dsh-plugin"`
+   `"de-ai-flavor-dsh": "link:<你的路径>/duiwei/dsh-plugin"`
 3. 在同目录 `cordis.patch.yml` 的 `insert` 列表里加：
    `- id: de-ai-flavor-dsh` / `name: 'de-ai-flavor-dsh'`
 4. 在 profile 目录跑 `pnpm install`（或用等价的符号链接把包放进 `node_modules`）。
