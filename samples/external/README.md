@@ -2,28 +2,30 @@
 
 用来测误报：真实人类文本（非本项目自建、非 AI 生成）不应该被 lint 判成 AI 味。`selftest.py` 会按文件名自动选文体跑分。
 
+**这是调参 / 回归集，不作为对外误报率；真留出集在 `samples/external-holdout/`。**
+
 **分成两组：**
 
 - **调参集**（3 篇）：开发时用来发现误报、调权重，**不报告误报率**。
-- **留出集**（12 篇）：从 v0.12 起冻结，不参与调参；README 只报告留出集误报率（当前 **0/12**）。
+- **回归集**（12 篇）：开发回归用，不作为对外误报率；真留出集见 `samples/external-holdout/`。
 
 | 文件 | 类型 / 来源 | 字数 | 测试文体 | 分组 |
 | --- | --- | --- | --- | --- |
-| `gaokao-beijing-2020-zhongguo-jingshen.md` | 北京考试报《高考·作文》2020-09-30 刊载学生作文（作者信息已隐去） | 201 | essay | 留出 |
+| `gaokao-beijing-2020-zhongguo-jingshen.md` | 北京考试报《高考·作文》2020-09-30 刊载学生作文（作者信息已隐去） | 201 | essay | 回归 |
 | `gaokao-beijing-2020-shuo-weiji.md` | 同上（作者信息已隐去） | 159 | essay | 调参 |
-| `gaokao-beijing-2020-wo-yu-guo.md` | 同上（作者信息已隐去） | 159 | essay | 留出 |
-| `zhongkao-beijing-2024-baibeixin.md` | 北京考试报《初中学考·作文》2024-03-30 刊载学生例文（作者信息已隐去） | 191 | essay | 留出 |
-| `notice-moe-2025.md` | 教育部通知（教研函〔2025〕2号），官方公文 | 219 | notice | 留出 |
-| `notice-school-nwu-2025.md` | 西北大学学工部寒假安全教育通知节选，学校内部通知（已去除联系电话） | 484 | notice | 留出 |
-| `notice-school-nwu-studentcard-2025.md` | 西北大学学工部补办学生证通知节选（已去除门牌与联系方式） | 338 | notice | 留出 |
+| `gaokao-beijing-2020-wo-yu-guo.md` | 同上（作者信息已隐去） | 159 | essay | 回归 |
+| `zhongkao-beijing-2024-baibeixin.md` | 北京考试报《初中学考·作文》2024-03-30 刊载学生例文（作者信息已隐去） | 191 | essay | 回归 |
+| `notice-moe-2025.md` | 教育部通知（教研函〔2025〕2号），官方公文 | 219 | notice | 回归 |
+| `notice-school-nwu-2025.md` | 西北大学学工部寒假安全教育通知节选，学校内部通知（已去除联系电话） | 484 | notice | 回归 |
+| `notice-school-nwu-studentcard-2025.md` | 西北大学学工部补办学生证通知节选（已去除门牌与联系方式） | 338 | notice | 回归 |
 | `report-vocational-school-2024.md` | 济宁市高级职业学校 2024 年工作总结节选 | 349 | report | 调参 |
-| `gov-report-work-2025.md` | 2025 年政府工作报告节选，官方文件 | 478 | gov | 留出 |
-| `gov-summary-yuanjiang-2024.md` | 沅江市数据局 2024 年工作总结节选 | 444 | gov | 留出 |
-| `article-shmeea-essay-review.md` | 上海市教育考试院 2020 高考作文评析节选 | 413 | article | 留出 |
-| `article-bjksb-2024-gaokao-review.md` | 北京考试报《试题评析》2024-06-12 北京市高考语文试卷特点节选 | 442 | article | 留出 |
-| `zhuziqing-congcong.md` | 朱自清《匆匆》，1922，公有领域 | 542 | essay | 留出 |
-| `zhuziqing-beiying.md` | 朱自清《背影》，1925，公有领域 | 1141 | essay | 留出 |
-| `luxun-guxiang.md` | 鲁迅《故乡》，1921，公有领域 | 158 | essay | 留出 |
+| `gov-report-work-2025.md` | 2025 年政府工作报告节选，官方文件 | 478 | gov | 回归 |
+| `gov-summary-yuanjiang-2024.md` | 沅江市数据局 2024 年工作总结节选 | 444 | gov | 回归 |
+| `article-shmeea-essay-review.md` | 上海市教育考试院 2020 高考作文评析节选 | 413 | article | 回归 |
+| `article-bjksb-2024-gaokao-review.md` | 北京考试报《试题评析》2024-06-12 北京市高考语文试卷特点节选 | 442 | article | 回归 |
+| `zhuziqing-congcong.md` | 朱自清《匆匆》，1922，公有领域 | 542 | essay | 回归 |
+| `zhuziqing-beiying.md` | 朱自清《背影》，1925，公有领域 | 1141 | essay | 回归 |
+| `luxun-guxiang.md` | 鲁迅《故乡》，1921，公有领域 | 158 | essay | 回归 |
 
 ## 许可范围（重要）
 
@@ -35,6 +37,6 @@
 
 ## 已知局限
 
-- 留出集样本仍然偏短（158–349 字），lint 自述不足 150 字会低估分数；完整 800 字作文、完整通知、完整总结还缺。
+- 回归集样本长度 158–1141 字，但完整 800 字考场作文仍缺，lint 自述不足 150 字会低估分数；完整 800 字作文、完整通知、完整总结还缺。
 - 考试作文只有北京一地，通知/总结来自高校、中职、政府部门；企业工作总结、真实公众号文章还缺。
 - 0/13 只说明这批留出样本没有被误报，不能外推到所有真实文本。

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.12，零依赖）
+"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.13，零依赖）
 
 只查表面特征：词表命中、防御性句式、句长/段长分布、口语标记密度、标点规整度。
 第二层提示（作文腔意象 / 人物格言句 / 无阻力 / 过度洁净）只进人工复核、不扣分；完整审稿见 references/review-layers.md。
@@ -482,16 +482,25 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
             continue
         density = len(matches) / kchars
         penalty = min(spec["cap"], density * spec["weight"])
-        if any(rule in spec["name"] for rule in manual_rules):
+        formal_duiju = (
+            spec["name"].startswith("防御性句式")
+            and matches
+            and all(("并非" in m or "而非" in m) for m in matches)
+        )
+        formal_allowed_genre = requested_genre in {"essay", "article", "gov", "notice"}
+        # 一次「并非……而是……」在四种书面文体里转人工；两次以上且每千字 ≥2 次，仍按 AI 防御句式扣分
+        formal_exempt = formal_allowed_genre and formal_duiju and (
+            len(matches) < 2 or len(matches) / kchars < 2.0
+        )
+        formal_dense = formal_duiju and len(matches) >= 2 and len(matches) / kchars >= 2.0
+        if formal_exempt:
+            official_manual.append(spec["name"])
+            manual_reasons.add("formal")
+            penalty = 0.0
+        elif not formal_dense and any(rule in spec["name"] for rule in manual_rules):
             # 官方文体：合法对举 / 格式性序数等不自动扣分，转人工复核
             official_manual.append(spec["name"])
             manual_reasons.add("official")
-            penalty = 0.0
-        elif (spec["name"].startswith("防御性句式")
-              and matches and all(("并非" in m or "而非" in m) for m in matches)):
-            # 「并非……而是……」在作文、评论、公文里都是正常对举；「不是……而是……」仍按 AI 防御句式扣分
-            official_manual.append(spec["name"])
-            manual_reasons.add("formal")
             penalty = 0.0
         pattern_hits.append({
             "类别": spec["name"],
@@ -746,17 +755,17 @@ def suggestions(m: dict) -> list[str]:
     if m.get("人工复核（文体）"):
         names = "、".join(m["人工复核（文体）"])
         sources = set(m.get("人工复核（文体）来源", []))
-        if "formal" in sources or ("essay" in sources and "official" not in sources):
+        if "formal" in sources:
             tips.append(
                 "文体人工复核：" + names +
                 " 属正常对举（并非……而是……），不自动扣分；结合上下文判断是否保留，不要当 AI 防御句式删。"
             )
-        elif "official" in sources:
+        if "official" in sources:
             tips.append(
                 "文体人工复核：" + names +
                 " 不自动扣分，按 references/official-style.md 的四测试判断是否保留。"
             )
-        else:
+        if not sources:
             tips.append("文体人工复核：" + names + " 不自动扣分，请人工判断。")
     if any("书面腔" in k for k in cats):
         tips.append("有书面腔：进行+动词 / 随着…发展 / 被…所，改成动词直接说（做、改、看）。")
@@ -829,10 +838,10 @@ def print_report(path: str, m: dict) -> None:
     if m.get("人工复核（文体）"):
         print(f"文体人工复核：{'、'.join(m['人工复核（文体）'])}（不自动扣分）")
         sources = set(m.get("人工复核（文体）来源", []))
-        if "formal" in sources or ("essay" in sources and "official" not in sources):
+        if "formal" in sources:
             print("  「并非……而是……」属正常对举，结合上下文判断是否保留，不要当 AI 防御句式删")
-        else:
-            print("  按 references/official-style.md 的四测试判断：能对账、挪不动、在结构位、删了会疼才保留")
+        if "official" in sources:
+            print("  按 references/official-style.md 的四测试判断：能对账、挪不动、在结构位、删了才疼才保留")
     if m["字数"] < 150:
         print("  注：字数不足 150，风险分容易被低估，请以命中项为主。")
     hits = fmt_hits(m)

@@ -61,9 +61,9 @@ def score_genre(text: str, genre: str) -> int:
 
 
 def external_genre(name: str) -> str:
-    if name.startswith("notice"):
+    if name.startswith("notice") or name.startswith("holdout-notice"):
         return "notice"
-    if name.startswith("gov-"):
+    if name.startswith("gov-") or name.startswith("holdout-gov"):
         return "gov"
     if name.startswith("article"):
         return "article"
@@ -277,6 +277,19 @@ def main() -> int:
     if not ok_essay_hint:
         failures.append("essay 模式人工复核提示缺失（人工复核键或 suggestions 输出）")
 
+    chat_formal = collect_metrics(clean_text("这并非失败，而是另一种开始。"), genre="chat")
+    ok_chat_penalty = "防御性句式（不是X而是Y）" in chat_formal.get("扣分", {})
+    print(f"  {'✓' if ok_chat_penalty else '✗'} chat 模式「并非……而是」仍按防御句式扣分")
+    if not ok_chat_penalty:
+        failures.append("chat 模式「并非……而是」被错误豁免")
+
+    dense_text = "这并非失败，而是开始。那并非终点，而是过程。另一处并非偶然，而是必然。" * 2
+    dense_m = collect_metrics(clean_text(dense_text), genre="essay")
+    ok_dense = "防御性句式（不是X而是Y）" in dense_m.get("扣分", {})
+    print(f"  {'✓' if ok_dense else '✗'} essay 模式高密度「并非……而是」仍扣分")
+    if not ok_dense:
+        failures.append("essay 模式高密度「并非……而是」被错误豁免")
+
     gov_manual = collect_metrics(clean_text("这不是技术问题，而是管理问题。"), genre="gov")
     gov_tips = suggestions(gov_manual)
     ok_gov_hint = bool(gov_manual.get("人工复核（文体）")) and any(
@@ -322,7 +335,7 @@ def main() -> int:
     tuning_external = {"gaokao-beijing-2020-shuo-weiji.md", "report-vocational-school-2024.md", "article-shmeea-essay-review.md"}
     tuning_files = [p for p in ext_files if p.name in tuning_external]
     holdout_files = [p for p in ext_files if p.name not in tuning_external]
-    print(f"  调参集：{len(tuning_files)} 篇（不报误报率，避免自我证明）；留出集：{len(holdout_files)} 篇")
+    print(f"  调参集：{len(tuning_files)} 篇；回归集：{len(holdout_files)} 篇（只做回归，不作为对外误报率）")
     false_positives = 0
     for path in holdout_files:
         genre = external_genre(path.name)
@@ -334,7 +347,26 @@ def main() -> int:
         if not ok:
             failures.append(f"外部真实文本误伤：{path.name} {s} > 15")
     if ext_files:
-        print(f"  留出集误报率：{false_positives}/{len(holdout_files)}")
+        print(f"  回归集通过：{false_positives}/{len(holdout_files)} 误报")
+
+    print("\n== 7c. 真留出集（冻结后一次性评估） ==")
+    hold_dir = SAMPLES / "external-holdout"
+    hold_files = sorted(hold_dir.glob("*.md")) if hold_dir.exists() else []
+    hold_files = [p for p in hold_files if p.name != "README.md"]
+    if not hold_files:
+        failures.append("缺少真留出集 samples/external-holdout/*.md")
+    hold_fp = 0
+    for path in hold_files:
+        genre = external_genre(path.name)
+        s = score_genre(path.read_text(encoding="utf-8"), genre)
+        ok = s <= 15
+        if not ok:
+            hold_fp += 1
+        print(f"  {'✓' if ok else '✗'} {path.name}（{genre}）：风险分 {s} ≤ 15")
+        if not ok:
+            failures.append(f"真留出集误报：{path.name} {s} > 15（不要为它调参，下一版换新留出集）")
+    if hold_files:
+        print(f"  真留出集误报率：{hold_fp}/{len(hold_files)}（一次性，不用于调参）")
 
     print("\n== 8. 公文 / 官方文体模式 ==")
     notice_text = (SAMPLES / "08-official-notice.md").read_text(encoding="utf-8")
