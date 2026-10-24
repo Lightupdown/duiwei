@@ -66,6 +66,16 @@ VOCAB_CATEGORIES = {
             "松弛感", "内核稳定",
         ],
     },
+    "报告/总结套话": {
+        "weight": 2.5,
+        "cap": 18.0,
+        "items": [
+            "在公司的正确领导下", "正确领导下", "大力支持下", "围绕年度工作目标",
+            "扎实推进", "显著成效", "有效提升", "显著增强", "再上新台阶",
+            "持续发力", "久久为功", "再创佳绩", "有待加强", "仍需提升",
+            "精细化管理", "创新意识", "全面提升", "持续优化", "紧紧围绕",
+        ],
+    },
     "拟人喻体/意义拔高": {
         "weight": 3.0,
         "cap": 10.0,
@@ -259,13 +269,14 @@ RESISTANCE_WORDS = [
     "没成", "不行", "白跑", "返工", "贵了", "没谈成", "失败", "不肯", "犹豫",
     "拒绝", "打不开", "没修好", "吵", "争执", "还价", "退钱", "算了",
     "听岔", "听不懂", "没反应", "不碰", "费那个钱", "没再说话",
+    "延期", "超支", "变更", "离职", "缺口", "投诉", "事故", "故障",
 ]
 
 # 文体别名：作文 / 通知 / 文章 / 文案都按「书面」计分，只是标签不同
-GENRE_ALIASES = {"essay": "written", "notice": "written", "article": "written", "copy": "written", "gov": "written"}
+GENRE_ALIASES = {"essay": "written", "notice": "written", "article": "written", "copy": "written", "gov": "written", "report": "written"}
 GENRE_LABELS = {
     "auto": "自动", "spoken": "口播", "written": "书面", "chat": "聊天",
-    "essay": "作文", "notice": "通知", "article": "文章", "copy": "文案", "gov": "政务/官方",
+    "essay": "作文", "notice": "通知", "article": "文章", "copy": "文案", "gov": "政务/官方", "report": "报告",
 }
 
 # 公文/官方格式要素（识别到只提示、不计分；见 research/deep/official-docs.md、gov-tone.md）
@@ -813,7 +824,7 @@ def main() -> int:
     parser.add_argument("files", nargs="*", help="待检查文件；留空则读 stdin")
     parser.add_argument("--json", action="store_true", help="输出 JSON")
     parser.add_argument("--genre", default="auto",
-                        choices=["auto", "spoken", "written", "chat", "essay", "notice", "article", "copy", "gov"],
+                        choices=["auto", "spoken", "written", "chat", "essay", "notice", "article", "copy", "gov", "report"],
                         help="文体：auto/spoken/written/chat；essay/notice/article/copy/gov 按对应文体计分（gov=政务/官方，对举与版式均匀只提示不扣分）")
     parser.add_argument("--fail-over", type=float, default=None, help="风险分 >= 该值时返回退出码 1")
     args = parser.parse_args()

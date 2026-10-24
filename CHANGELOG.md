@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7 — 2026-10-24
+
+- 新增第八个档案：[`references/genres/08-报告与总结.md`](references/genres/08-报告与总结.md)。
+- 文体矩阵、SKILL 路由与分文体标准补「报告 / 总结」；lint 加 `--genre report`。
+- lint 新增「报告 / 总结套话」词表（万能开头、形容词成绩、问题虚化、空表态等）。
+- 新增报告正负样本 [`samples/10-ai-report.md`](samples/10-ai-report.md)、[`samples/11-human-report.md`](samples/11-human-report.md)。
+- 文案总述从「六类文体」更新为「七类文体」。
+
 ## v0.6 — 2026-10-20
 
 - 新增第二层审稿：[`references/review-layers.md`](references/review-layers.md)。

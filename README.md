@@ -1,6 +1,6 @@
 # 去 AI 味 · de-ai-flavor
 
-> 中文写作与改写的「去 AI 味」规范：六类文体、分层审稿、体检脚本、正负样本库。
+> 中文写作与改写的「去 AI 味」规范：七类文体、分层审稿、体检脚本、正负样本库。
 >
 > A Chinese writing/rewriting skill for removing "AI flavor" — genre-aware rules, layered human review, a surface-level linter, and annotated positive/negative samples. It is **not** an AI detector and does **not** help evade detection.
 
@@ -10,7 +10,7 @@
 
 一套让中文写得更像「具体的人在这个场合说话」的写作规范，也是一个可直接装进 AI Agent 的技能：
 
-- **六类文体分开处理**：作文 / 公众号文章 / 通知公告 / 视频口播 / 朋友圈聊天 / 产品课程文案；另加「只说了润色一下」的改稿流程。
+- **七类文体分开处理**：作文 / 公众号文章 / 通知公告 / 视频口播 / 朋友圈聊天 / 产品课程文案 / 报告总结；另加「只说了润色一下」的改稿流程。
 - **两层审稿**：脚本查词、句式、节奏等表面特征；第二层人工查逻辑、工序可信度、人物台词、细节负载、结构闭环。
 - **两张评分卡**：A 真实感（防 AI 腔与设计感）、B 文笔（防越改越干瘪）。两张都过才交付。
 - **可验证**：体检脚本、13 组改写案例回归、坏样本 / 正样本对照、自动自检脚本。
@@ -44,6 +44,7 @@ python3 scripts/ai_tell_lint.py 你的稿子.md
 python3 scripts/ai_tell_lint.py --genre essay 作文.md          # 作文
 python3 scripts/ai_tell_lint.py --genre notice 通知.md         # 通知 / 公告
 python3 scripts/ai_tell_lint.py --genre gov 评论.md            # 官方评论 / 政务
+python3 scripts/ai_tell_lint.py --genre report 总结.md        # 报告 / 总结
 ```
 
 - 审稿素材（剧本式提取段落骨架、台词、数字、意象、结尾）：
@@ -70,13 +71,13 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 │   ├── ai-tells-cn.md            # 中文 AI 味特征清单 + 配额 + 语料验证 R 值
 │   ├── review-layers.md          # 第二层审稿 + A/B 两张评分卡 + 停止规则
 │   ├── human-voice/              # 人话特征库 + AI→人 改写案例
-│   └── genres/                   # 文体矩阵 + 7 个文体档案
+│   └── genres/                   # 文体矩阵 + 8 个文体档案
 ├── research/
 │   ├── github-survey.md          # 17 个同类项目调研
 │   ├── genre-notes.md            # 分文体外部资料
 │   └── deep/                     # 作文评分 / 公文规范 / 政务文风 / AI 使用政策
 ├── samples/
-│   ├── 01–09-*.md                # 正负对照样本
+│   ├── 01–11-*.md                # 正负对照样本（含报告正负样本）
 │   ├── hard-cases/               # 坏样本：lint 0 分但人工不过关
 │   └── README.md
 ├── scripts/
@@ -88,7 +89,7 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 └── .github/workflows/ci.yml      # GitHub Actions：跑自检
 ```
 
-## 六类文体，各用各的标准
+## 七类文体，各用各的标准
 
 | 文体 | 口语容忍 | 一句话标准 |
 | --- | --- | --- |
@@ -98,6 +99,7 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 | 视频口播 | 高（1–3 / 百字） | 像真人在说话；气口、具体、不念稿 |
 | 朋友圈 / 聊天 | 最高 | 短、随意、像本人；不演、不客服 |
 | 产品 / 课程文案 | 低 | 具体、可验证、承认局限；不吹、不假 |
+| 报告 / 总结 | 0 | 可信优先：数据有口径、问题不虚化、下一步能执行 |
 
 详细规则见 [`references/genres/00-文体矩阵.md`](references/genres/00-文体矩阵.md) 和它索引的档案。
 
@@ -122,6 +124,7 @@ node scripts/verify_plugin.mjs     # DSH 桥接插件自检（不安装、不重
 
 - 机器层：13 组「AI 原稿 → 改后」案例全部降分，平均 18.6 → 0.0；样本区分度见 [`samples/`](samples/README.md)。
 - 第二层：标准失败案例 [`hard-cases/01-ai-but-clean.md`](samples/hard-cases/01-ai-but-clean.md)（lint 0 分，卡 A 3/20、B 4/10）与正样本 [`09-essay-zhineng.notes.md`](samples/09-essay-zhineng.notes.md)（lint 0 分、零第二层提示；两轮独立盲评 A 17/20 · B 9/10、A 15/20 · B 9/10，均判「能交付」）。
+- 报告 / 总结：正负样本 [`10-ai-report.md`](samples/10-ai-report.md)（36 分）与 [`11-human-report.md`](samples/11-human-report.md)（0 分）；lint 新增「报告 / 总结套话」检测。
 - `selftest.py` 覆盖上述全部回归项；`verify_plugin.mjs` 覆盖 DSH 集成文件。
 
 ## 安装为 DSH skill（可选）
@@ -147,6 +150,7 @@ DSH 的技能通过一个桥接插件注册，桥接插件在 [`dsh-plugin/`](ds
 - 第二层审稿靠人（或独立 critic 代理）判断，没有自动化评分；脚本 0 分不代表过关。
 - 高考 / 中考评分细则各省不完全公开，深研里的分项数据部分是教研整理（B 级），引用时注意。
 - 政策与官方文风会更新，建议每学期复核 `research/deep/`。
+- 报告 / 总结目前只有一组正负样本，阈值与套话词表还需要真实工作总结、述职、情况报告来校准。
 
 ## 贡献
 

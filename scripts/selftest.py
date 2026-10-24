@@ -2,15 +2,16 @@
 # -*- coding: utf-8 -*-
 """selftest.py — 验证「去AI味」项目自身是否自洽（零依赖）
 
-做七件事：
+做八件事：
 1. 样本门槛：口播稿样本的 AI / 人话区分度；
 2. 书面样本门槛：公众号文案样本的 AI / 人话区分度；
 3. 作文样本门槛：AI 作文 / 人写作文的区分度；
-4. 案例回归：references/human-voice/rewrite-examples.md 里 13 组
+4. 报告样本门槛：AI 总结 / 人写总结的区分度；
+5. 案例回归：references/human-voice/rewrite-examples.md 里 13 组
    「AI 原稿 → 改后」逐组跑分，检查改写后是否稳定降分；
-5. 分文体档案完整性检查；
-6. 检测器单元检查 + 人工复核项 + 优秀文本不误伤；
-7. 公文 / 官方文体模式：格式保护、官腔补检、官方对举不扣分。
+6. 分文体档案完整性检查；
+7. 检测器单元检查 + 人工复核项 + 优秀文本不误伤；
+8. 公文 / 官方文体模式 + 第二层审稿资产。
 
 失败返回非零退出码，改脚本 / 改案例后跑这个做回归。
 
@@ -43,6 +44,7 @@ GENRE_FILES = [
     "05-朋友圈与聊天.md",
     "06-产品与课程文案.md",
     "07-润色与改稿.md",
+    "08-报告与总结.md",
 ]
 
 
@@ -150,6 +152,10 @@ def main() -> int:
     print("\n== 3. 作文样本门槛 ==")
     section_pair(failures, "作文样本", "05-ai-essay.md", "06-human-essay.md",
                  min_ai=35, max_human=15, min_delta=25)
+
+    print("\n== 3b. 报告样本门槛 ==")
+    section_pair(failures, "报告样本", "10-ai-report.md", "11-human-report.md",
+                 min_ai=30, max_human=15, min_delta=25)
 
     print("\n== 4. 案例回归（references/human-voice/rewrite-examples.md）==")
     if not EXAMPLES.exists():
