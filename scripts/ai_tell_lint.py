@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.9，零依赖）
+"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.10，零依赖）
 
 只查表面特征：词表命中、防御性句式、句长/段长分布、口语标记密度、标点规整度。
 第二层提示（作文腔意象 / 人物格言句 / 无阻力 / 过度洁净）只进人工复核、不扣分；完整审稿见 references/review-layers.md。
@@ -284,7 +284,8 @@ GENRE_LABELS = {
 # 文体豁免：这些词在该文体里是正常用法，不按 AI 腔扣分
 GENRE_EXEMPTIONS = {
     "essay": {"拟人喻体/意义拔高": {"仿佛", "宛如"},
-              "通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
+              "通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"},
+              "营销/时代套话": {"尤为重要", "至关重要"}},
     "chat": {"收条式应答": {"收到", "懂了", "我明白了"}},
     "written": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "article": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
@@ -481,6 +482,11 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
             # 官方文体：合法对举 / 格式性序数等不自动扣分，转人工复核
             official_manual.append(spec["name"])
             penalty = 0.0
+        elif (requested_genre == "essay" and spec["name"].startswith("防御性句式")
+              and matches and all(("并非" in m or "而非" in m) for m in matches)):
+            # 作文里「并非……而是……」是正常对举；「不是……而是……」仍按 AI 防御句式扣分
+            official_manual.append(spec["name"])
+            penalty = 0.0
         pattern_hits.append({
             "类别": spec["name"],
             "总次数": len(matches),
@@ -496,7 +502,7 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
     if official_hits:
         metrics["公文格式要素"] = official_hits
     if official_manual:
-        metrics["人工复核（官方文体）"] = sorted(set(official_manual))
+        metrics["人工复核（文体）"] = sorted(set(official_manual))
     metrics["官方文体模式"] = requested_genre if protected_mode else None
 
     # 金句近似
@@ -731,7 +737,7 @@ def suggestions(m: dict) -> list[str]:
         )
     if m.get("人工复核（官方文体）"):
         tips.append(
-            "官方文体人工复核："
+            "文体人工复核："
             + "、".join(m["人工复核（官方文体）"])
             + " 不自动扣分，按 research/deep/gov-tone.md 的四测试判断是否保留。"
         )
@@ -804,7 +810,7 @@ def print_report(path: str, m: dict) -> None:
         print(f"识别为公文格式：{'、'.join(m['公文格式要素'])}（格式要素与文种结语不计入 AI 味）")
         print("  请人工核对：文种—结语对应、发文字号/成文日期/层次序数；惯例见 research/deep/official-docs.md")
     if m.get("人工复核（官方文体）"):
-        print(f"官方文体人工复核：{'、'.join(m['人工复核（官方文体）'])}（不自动扣分）")
+        print(f"文体人工复核：{'、'.join(m['人工复核（文体）'])}（不自动扣分）")
         print("  按 research/deep/gov-tone.md 第三节「四测试」判断：能对账、挪不动、在结构位、删了会疼才保留")
     if m["字数"] < 150:
         print("  注：字数不足 150，风险分容易被低估，请以命中项为主。")

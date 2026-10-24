@@ -60,6 +60,18 @@ def score_genre(text: str, genre: str) -> int:
     return collect_metrics(clean_text(text), genre=genre)["AI味风险分"]
 
 
+def external_genre(name: str) -> str:
+    if name.startswith("notice"):
+        return "notice"
+    if name.startswith("gov-"):
+        return "gov"
+    if name.startswith("article"):
+        return "article"
+    if name.startswith("report"):
+        return "report"
+    return "essay"
+
+
 def hit_names(text: str) -> set[str]:
     m = metrics_of(text)
     names = {hit["类别"] for hit in m.get("词表命中", [])}
@@ -294,11 +306,12 @@ def main() -> int:
         failures.append("缺少外部样本 samples/external/*.md")
     false_positives = 0
     for path in ext_files:
-        s = score(path.read_text(encoding="utf-8"))
+        genre = external_genre(path.name)
+        s = score_genre(path.read_text(encoding="utf-8"), genre)
         ok = s <= 15
         if not ok:
             false_positives += 1
-        print(f"  {'✓' if ok else '✗'} {path.name}：风险分 {s} ≤ 15")
+        print(f"  {'✓' if ok else '✗'} {path.name}（{genre}）：风险分 {s} ≤ 15")
         if not ok:
             failures.append(f"外部真实文本误伤：{path.name} {s} > 15")
     if ext_files:
