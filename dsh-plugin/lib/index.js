@@ -9,10 +9,31 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const SKILL_DIR = process.env.DE_AI_FLAVOR_SKILL_DIR || join(HERE, '..', '..')
 const SKILL_MD = join(SKILL_DIR, 'SKILL.md')
 
-const DESCRIPTION =
-  '中文写作与改写的「去 AI 味」规范：写视频口播稿、产品/课程文案、公众号/小红书、朋友圈、评论回复、通知，' +
-  '或把已有文本改得更像真人写的、更口语化，或让 AI 自查文本有没有 AI 腔时使用。' +
-  '目标不是堆口语词，而是恢复人类语言的自然损耗（停顿、冗余、不均匀、具体、不完美）。'
+const FALLBACK_DESCRIPTION =
+  '中文写作与改写的「去 AI 味」规范：先判文体再改，覆盖作文/文学、公众号/文章、通知/公告、视频口播、朋友圈/聊天、产品/课程文案、报告/总结；' +
+  '或让 AI 自查文本有没有 AI 腔时使用。不代写、不帮规避 AI 检测。'
+
+// 从 SKILL.md frontmatter 读 description，避免插件里再维护一份会过期的简介。
+function readFrontmatterDescription(body) {
+  const m = body.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+  if (!m) return ''
+  const lines = m[1].split(/\r?\n/)
+  const i = lines.findIndex((line) => /^description:/.test(line))
+  if (i < 0) return ''
+  const first = lines[i].replace(/^description:\s*/, '').trim()
+  if (first && first !== '|' && first !== '>') return first.replace(/^["']|["']$/g, '')
+  const buf = []
+  for (let j = i + 1; j < lines.length; j++) {
+    const line = lines[j]
+    if (line.trim() === '') continue
+    if (/^\s+/.test(line)) {
+      buf.push(line.trim())
+      continue
+    }
+    break
+  }
+  return buf.join(' ')
+}
 
 function loadContent() {
   if (!existsSync(SKILL_MD)) {
@@ -29,11 +50,13 @@ function loadContent() {
 
 export function apply(ctx) {
   try {
+    const content = loadContent()
+    const parsed = readFrontmatterDescription(content)
     ctx.skills.register({
       name: 'de-ai-flavor',
       source: 'runtime',
-      description: DESCRIPTION,
-      content: loadContent(),
+      description: parsed || FALLBACK_DESCRIPTION,
+      content,
     })
   } catch (e) {
     console.error('[de-ai-flavor-dsh] skill 注册失败：' + String((e && e.message) || e))

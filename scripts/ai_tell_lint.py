@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.2，零依赖）
+"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.8，零依赖）
 
 只查表面特征：词表命中、防御性句式、句长/段长分布、口语标记密度、标点规整度。
 第二层提示（作文腔意象 / 人物格言句 / 无阻力 / 过度洁净）只进人工复核、不扣分；完整审稿见 references/review-layers.md。
@@ -10,9 +10,11 @@
     python3 ai_tell_lint.py 文本.md
     python3 ai_tell_lint.py a.md b.md          # 多文件对比（改写前后）
     python3 ai_tell_lint.py --json 文本.md
-    python3 ai_tell_lint.py --genre spoken 口播稿.md   # spoken / written / chat / auto
+    python3 ai_tell_lint.py --genre spoken 口播稿.md
     python3 ai_tell_lint.py --fail-over 60 文本.md     # 分数 >= 60 时返回退出码 1
 
+文体：auto / spoken / written / chat / essay / article / notice / report / copy / gov
+    其中 essay=作文、article=文章、notice=通知公告、report=报告总结、copy=产品文案、gov=政务官方。
 词表来源：references/ai-tells-cn.md，改词表请同步改那边。
 """
 
@@ -279,6 +281,17 @@ GENRE_LABELS = {
     "essay": "作文", "notice": "通知", "article": "文章", "copy": "文案", "gov": "政务/官方", "report": "报告",
 }
 
+# 文体豁免：这些词在该文体里是正常用法，不按 AI 腔扣分
+GENRE_EXEMPTIONS = {
+    "essay": {"拟人喻体/意义拔高": {"仿佛", "宛如"},
+              "通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
+    "chat": {"收条式应答": {"收到", "懂了", "我明白了"}},
+    "article": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
+    "notice": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
+    "report": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
+    "gov": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
+}
+
 # 公文/官方格式要素（识别到只提示、不计分；见 research/deep/official-docs.md、gov-tone.md）
 OFFICIAL_FORMAT_PATTERNS = {
     "标题文种": re.compile(r"^关于[^。\n]{0,40}的(?:通知|公告|通告|通报|请示|报告|函)\s*$", re.M),
@@ -418,9 +431,13 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
 
     # 词表
     vocab_hits: list[dict] = []
+    exempt_map = GENRE_EXEMPTIONS.get(requested_genre, {})
     for category, spec in VOCAB_CATEGORIES.items():
+        exempt = exempt_map.get(category, set())
         counted = []
         for item in spec["items"]:
+            if item in exempt:
+                continue
             n = count_phrase(text, item)
             if n:
                 counted.append({"词": item, "次数": n, "例句": context_of(text, item)})
@@ -825,7 +842,7 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="输出 JSON")
     parser.add_argument("--genre", default="auto",
                         choices=["auto", "spoken", "written", "chat", "essay", "notice", "article", "copy", "gov", "report"],
-                        help="文体：auto/spoken/written/chat；essay/notice/article/copy/gov 按对应文体计分（gov=政务/官方，对举与版式均匀只提示不扣分）")
+                        help="文体：auto / spoken / written / chat / essay（作文）/ article（文章）/ notice（通知公告）/ report（报告总结）/ copy（产品文案）/ gov（政务官方）。按对应文体给权重与豁免；gov 下对举与版式均匀只提示不扣分。")
     parser.add_argument("--fail-over", type=float, default=None, help="风险分 >= 该值时返回退出码 1")
     args = parser.parse_args()
 

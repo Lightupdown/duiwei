@@ -237,6 +237,18 @@ def main() -> int:
     if not ok_genre:
         failures.append(f"genre 别名异常：notice → {notice_m['判定文体']}")
 
+    print("\n== 6b. 文体豁免 ==")
+    for text, genre, category in [
+        ("收到，我明白了。", "chat", "收条式应答"),
+        ("他仿佛听见了什么。", "essay", "拟人喻体/意义拔高"),
+        ("因此，需要调整方案。", "notice", "通用连接/评价词"),
+    ]:
+        m = collect_metrics(clean_text(text), genre=genre)
+        hit = category in m.get("扣分", {})
+        print(f"  {'✓' if not hit else '✗'} {genre} 模式不误伤「{category}」：{text}")
+        if hit:
+            failures.append(f"文体豁免失效：{genre} 仍把「{category}」计入扣分")
+
     print("\n== 7. 优秀文本不误伤 ==")
     for fname, label, limit in [
         ("07-excellent-essay.md", "优秀散文", 10),
@@ -252,6 +264,17 @@ def main() -> int:
         print(f"  {'✓' if ok else '✗'} {label}（{fname}）风险分 {s} ≤ {limit}")
         if not ok:
             failures.append(f"优秀文本误伤：{label} {s} > {limit}")
+
+    print("\n== 7b. 外部真实文本不误伤 ==")
+    ext_path = SAMPLES / "external" / "zhuziqing-congcong.md"
+    if ext_path.exists():
+        s = score(ext_path.read_text(encoding="utf-8"))
+        ok = s <= 15
+        print(f"  {'✓' if ok else '✗'} 朱自清《匆匆》节选：风险分 {s} ≤ 15")
+        if not ok:
+            failures.append(f"外部真实文本误伤：{s} > 15")
+    else:
+        failures.append("缺少外部样本 samples/external/zhuziqing-congcong.md")
 
     print("\n== 8. 公文 / 官方文体模式 ==")
     notice_text = (SAMPLES / "08-official-notice.md").read_text(encoding="utf-8")
@@ -293,11 +316,25 @@ def main() -> int:
         and "L2 逻辑层" in rl_text
         and "卡 A｜真实感" in rl_text
         and "卡 B｜文笔与完成度" in rl_text
+        and "卡 C｜议论类" in rl_text
+        and "适用范围" in rl_text
         and "过度纠偏" in rl_text
     )
-    print(f"  {'✓' if ok else '✗'} review-layers.md 存在且含四层审稿 + 两张评分卡 + 过度纠偏")
+    print(f"  {'✓' if ok else '✗'} review-layers.md 存在且含叙事四层 + A/B/C 卡 + 适用范围 + 过度纠偏")
     if not ok:
         failures.append("review-layers.md 缺失或结构不完整")
+
+    official_path = ROOT / "references" / "official-style.md"
+    official_text = official_path.read_text(encoding="utf-8") if official_path.exists() else ""
+    ok_off = (
+        official_path.exists()
+        and "四测试" in official_text
+        and "A 类：必须保留" in official_text
+        and "发布形态三档" in official_text
+    )
+    print(f"  {'✓' if ok_off else '✗'} reference/official-style.md 存在（四测试 + A 类惯例 + 发布形态三档）")
+    if not ok_off:
+        failures.append("official-style.md 缺失或结构不完整")
 
     hard_annotated = ROOT / "samples" / "hard-cases" / "01-ai-but-clean.md"
     hard_raw = ROOT / "samples" / "hard-cases" / "01-ai-but-clean.raw.md"
