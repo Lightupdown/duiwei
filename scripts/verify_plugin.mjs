@@ -67,6 +67,8 @@ const required = [
   'samples/10-ai-report.md',
   'samples/11-human-report.md',
   'samples/external/zhuziqing-congcong.md',
+  'samples/external/zhuziqing-beiying.md',
+  'samples/external/luxun-guxiang.md',
   'research/github-survey.md',
   'research/genre-notes.md',
   'research/deep/gaokao-essay.md',

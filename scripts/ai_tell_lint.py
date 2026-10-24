@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.8，零依赖）
+"""ai_tell_lint.py — 中文文本「AI 味」体检脚本（v0.9，零依赖）
 
 只查表面特征：词表命中、防御性句式、句长/段长分布、口语标记密度、标点规整度。
 第二层提示（作文腔意象 / 人物格言句 / 无阻力 / 过度洁净）只进人工复核、不扣分；完整审稿见 references/review-layers.md。
@@ -286,6 +286,7 @@ GENRE_EXEMPTIONS = {
     "essay": {"拟人喻体/意义拔高": {"仿佛", "宛如"},
               "通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "chat": {"收条式应答": {"收到", "懂了", "我明白了"}},
+    "written": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "article": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "notice": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
     "report": {"通用连接/评价词": {"因此", "然而", "此外", "从而", "进而"}},
@@ -432,6 +433,9 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
     # 词表
     vocab_hits: list[dict] = []
     exempt_map = GENRE_EXEMPTIONS.get(requested_genre, {})
+    if requested_genre == "auto":
+        # auto 不判文体时，套用书面通用豁免（因此 / 然而 / 此外 等）
+        exempt_map = GENRE_EXEMPTIONS.get("written", {})
     for category, spec in VOCAB_CATEGORIES.items():
         exempt = exempt_map.get(category, set())
         counted = []
@@ -445,6 +449,9 @@ def collect_metrics(text: str, genre: str = "auto") -> dict:
             total = sum(c["次数"] for c in counted)
             density = total / kchars
             penalty = min(spec["cap"], density * spec["weight"])
+            if category == "报告/总结套话" and requested_genre != "report":
+                # 这组词在政务文本里可能是规范表述；只在 report 模式计分，其他模式交人工四测试
+                penalty = 0.0
             if is_gov and category == "营销/时代套话":
                 penalty *= 0.5
             if is_gov and category == "职场黑话/万能升华":

@@ -56,6 +56,10 @@ def score(text: str) -> int:
     return metrics_of(text)["AI味风险分"]
 
 
+def score_genre(text: str, genre: str) -> int:
+    return collect_metrics(clean_text(text), genre=genre)["AI味风险分"]
+
+
 def hit_names(text: str) -> set[str]:
     m = metrics_of(text)
     names = {hit["类别"] for hit in m.get("词表命中", [])}
@@ -105,14 +109,18 @@ def extract_pairs(path: Path) -> list[tuple[str, str, str]]:
 
 
 def section_pair(failures: list[str], label: str, ai_file: str, human_file: str,
-                 min_ai: int, max_human: int, min_delta: int) -> None:
+                 min_ai: int, max_human: int, min_delta: int, genre: str | None = None) -> None:
     ai_path = SAMPLES / ai_file
     human_path = SAMPLES / human_file
     if not ai_path.exists() or not human_path.exists():
         failures.append(f"{label}：样本文件缺失")
         return
-    ai_score = score(ai_path.read_text(encoding="utf-8"))
-    human_score = score(human_path.read_text(encoding="utf-8"))
+    if genre:
+        ai_score = score_genre(ai_path.read_text(encoding="utf-8"), genre)
+        human_score = score_genre(human_path.read_text(encoding="utf-8"), genre)
+    else:
+        ai_score = score(ai_path.read_text(encoding="utf-8"))
+        human_score = score(human_path.read_text(encoding="utf-8"))
     print(f"  {ai_file:<22}{ai_score:>3} / 100")
     print(f"  {human_file:<22}{human_score:>3} / 100")
     if ai_score < min_ai:
@@ -155,7 +163,7 @@ def main() -> int:
 
     print("\n== 3b. 报告样本门槛 ==")
     section_pair(failures, "报告样本", "10-ai-report.md", "11-human-report.md",
-                 min_ai=30, max_human=15, min_delta=25)
+                 min_ai=30, max_human=15, min_delta=25, genre="report")
 
     print("\n== 4. 案例回归（references/human-voice/rewrite-examples.md）==")
     if not EXAMPLES.exists():
@@ -242,12 +250,25 @@ def main() -> int:
         ("收到，我明白了。", "chat", "收条式应答"),
         ("他仿佛听见了什么。", "essay", "拟人喻体/意义拔高"),
         ("因此，需要调整方案。", "notice", "通用连接/评价词"),
+        ("因此，需要调整方案。", "auto", "通用连接/评价词"),
     ]:
         m = collect_metrics(clean_text(text), genre=genre)
         hit = category in m.get("扣分", {})
         print(f"  {'✓' if not hit else '✗'} {genre} 模式不误伤「{category}」：{text}")
         if hit:
             failures.append(f"文体豁免失效：{genre} 仍把「{category}」计入扣分")
+
+    gov_m = collect_metrics(clean_text("在公司的正确领导下，我们围绕年度工作目标努力。"), genre="gov")
+    ok_gov = "报告/总结套话" not in gov_m.get("扣分", {})
+    print(f"  {'✓' if ok_gov else '✗'} gov 模式不因「报告/总结套话」扣分（交四测试）")
+    if not ok_gov:
+        failures.append("报告套话词表在 gov 模式仍计分")
+
+    rep_m = collect_metrics(clean_text("在公司的正确领导下，我们围绕年度工作目标努力。"), genre="report")
+    ok_rep = "报告/总结套话" in rep_m.get("扣分", {})
+    print(f"  {'✓' if ok_rep else '✗'} report 模式仍能检出「报告/总结套话」")
+    if not ok_rep:
+        failures.append("报告套话词表在 report 模式漏检")
 
     print("\n== 7. 优秀文本不误伤 ==")
     for fname, label, limit in [
@@ -266,15 +287,22 @@ def main() -> int:
             failures.append(f"优秀文本误伤：{label} {s} > {limit}")
 
     print("\n== 7b. 外部真实文本不误伤 ==")
-    ext_path = SAMPLES / "external" / "zhuziqing-congcong.md"
-    if ext_path.exists():
-        s = score(ext_path.read_text(encoding="utf-8"))
+    ext_dir = SAMPLES / "external"
+    ext_files = sorted(ext_dir.glob("*.md")) if ext_dir.exists() else []
+    ext_files = [p for p in ext_files if p.name != "README.md"]
+    if not ext_files:
+        failures.append("缺少外部样本 samples/external/*.md")
+    false_positives = 0
+    for path in ext_files:
+        s = score(path.read_text(encoding="utf-8"))
         ok = s <= 15
-        print(f"  {'✓' if ok else '✗'} 朱自清《匆匆》节选：风险分 {s} ≤ 15")
         if not ok:
-            failures.append(f"外部真实文本误伤：{s} > 15")
-    else:
-        failures.append("缺少外部样本 samples/external/zhuziqing-congcong.md")
+            false_positives += 1
+        print(f"  {'✓' if ok else '✗'} {path.name}：风险分 {s} ≤ 15")
+        if not ok:
+            failures.append(f"外部真实文本误伤：{path.name} {s} > 15")
+    if ext_files:
+        print(f"  外部样本误报率：{false_positives}/{len(ext_files)}")
 
     print("\n== 8. 公文 / 官方文体模式 ==")
     notice_text = (SAMPLES / "08-official-notice.md").read_text(encoding="utf-8")
